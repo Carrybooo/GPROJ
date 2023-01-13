@@ -12,7 +12,7 @@ Debian ISO: firmware-11.5.0-amd64-DVD-1.iso
 Link: https://cdimage.debian.org/debian-cd/current/amd64/iso-dvd/   
 
 ### 1.2-Install OLSR   
-OLSRd v2, commit fb15d54 on Aug 25, 2022.   
-Link: https://github.com/OLSR/OONF/tree/fb15d54d6a7a087cb0c5ec37c49804f6ce432396
+OLSRd v2, commit ```fb15d54``` on Aug 25, 2022.   
+Link: https://github.com/OLSR/OONF/tree/fb15d54d6a7a087cb0c5ec37c49804f6ce432396   
 Use https://github.com/Carrybooo/GPROJ/blob/main/scripts/OLSR_Install.sh   
 
