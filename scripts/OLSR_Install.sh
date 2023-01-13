@@ -6,7 +6,7 @@
 # sudo bash OLSR_Install.sh
 sudo apt update -y && sudo apt upgrade -y &&\
 sudo apt install -y git cmake build-essential libnl-3* gcc libtomcrypt-dev &&\
-cd ~ &&\
+cd /home/debian/ &&\
 sudo mkdir -p -m 777 OLSR &&\
 sudo git clone https://github.com/OLSR/OONF OLSR &&\
 cd OLSR/build &&\
