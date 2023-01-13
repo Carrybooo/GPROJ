@@ -1,5 +1,4 @@
 # Terminal à la racine
-# sudo rm -rf OLSR
 # sudo su
 # cd /etc/apt
 # nano sources.list
@@ -20,11 +19,13 @@ sudo git clone https://github.com/OLSR/OONF OLSR &&\
 cd OLSR/build &&\
 sudo cmake .. &&\
 sudo make &&\
+sudo chown debian /home/debian/OLSR/apps/olsrd2/debian/olsrd2.conf &&\
+sudo chown debian /home/debian/OLSR/apps/olsrd2/debian/olsrd2.service &&\
 
 sudo mkdir -p /etc/olsrd2 &&\
 sudo ln -sfv /home/debian/OLSR/apps/olsrd2/debian/olsrd2.conf /etc/olsrd2/ &&\
 sudo ln -sfv /home/debian/OLSR/apps/olsrd2/debian/olsrd2.service /etc/systemd/system/ &&\
-sudo mkdir -p /home/debian/OLSR/run
+sudo mkdir -p /home/debian/OLSR/run &&\
 sudo ln -sfv /home/debian/OLSR/apps/olsrd2/debian/olsrd2.conf /home/debian/OLSR/run/ &&\
 sudo ln -sfv /home/debian/OLSR/apps/olsrd2/debian/olsrd2.service /home/debian/OLSR/run/ &&\
 sudo ln -sfv /home/debian/OLSR/build/olsrd2_static /usr/sbin/ &&\
@@ -35,11 +36,22 @@ sudo systemctl daemon-reload &&\
 
 echo Installation réussie
 
+# Recherche du numéro de carte Wifi
+# ip a
+
+# Modif fichier de conf si besoin
+# cd OLSR/run
+# sudo nano olsrd2.conf
+
+# [interface <numéro_de_carte>]
+# [interface=lo]
+# Enregistrer / fermer
+
 # Pour lancer olsrd2
 # sudo systemctl start olsrd2.service
 
 # Pour vérifier olsrd2 actif
-# sudo systemctl stats olsrd2.service
+# sudo systemctl status olsrd2.service
 
 # Pour stopper olsrd2
 # sudo systemctl stop olsrd2.service
