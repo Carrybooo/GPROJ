@@ -16,3 +16,9 @@ OLSRd v2, commit ```fb15d54``` on Aug 25, 2022.
 Link: https://github.com/OLSR/OONF/tree/fb15d54d6a7a087cb0c5ec37c49804f6ce432396   
 Use https://github.com/Carrybooo/GPROJ/blob/main/scripts/OLSR_Install.sh   
 
+### 1.3-Start OLSR
+
+Modify olsrd2.conf   
+Find it: ```find -name *.conf```   
+Edit it: ```sudo nano olsrd2.conf```   
+See at: http://www.olsr.org/mediawiki/index.php/OLSR_network_deployments   
