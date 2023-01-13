@@ -1,3 +1,8 @@
+# PC 1 - carte CC4
+# PC 4 - carte 28B
+# PC 7 - carte 272 
+# PC 16 - carte CB9
+
 # Terminal à la racine
 # sudo su
 # cd /etc/apt
@@ -42,10 +47,24 @@ echo Installation réussie
 # Modif fichier de conf si besoin
 # cd OLSR/run
 # sudo nano olsrd2.conf
+# sudo systemctl restart olsrd2.service
 
 # [interface <numéro_de_carte>]
 # [interface=lo]
 # Enregistrer / fermer
+
+# Vérification de la configuration sur le même réseau AD HOC
+# sudo iwconfig <numéro_de_carte>
+
+# Changement du mode MANAGED > Ad-Hoc
+# sudo systemctl mask wpa_supplicant
+# sudo systemctl stop wpa_supplicant
+# sudo ip link set <numéro_de_carte> down
+# sudo iwconfig <numéro_de_carte> mode ad-hoc
+
+# Changement du ESSID pour un nom commun aux noeuds
+# sudo iwconfig <numéro_de_carte> essid olsr
+# sudo ip link set <numéro_de_carte> up
 
 # Pour lancer olsrd2
 # sudo systemctl start olsrd2.service
