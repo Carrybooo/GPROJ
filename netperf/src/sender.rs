@@ -1,12 +1,13 @@
+//#![allow(unused)]
+
 mod reader;
 use crate::reader::config_reader::{Config,read_config};
 
 use arrayvec::ArrayVec;
 use std::io::{Read, Write};
 use std::process::exit;
-use std::collections::HashMap;
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, UdpSocket};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::thread;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering, AtomicU16};
@@ -15,17 +16,7 @@ use std::time::{Instant, Duration};
 use fastping_rs::PingResult::{Idle, Receive};
 use fastping_rs::Pinger;
 
-/*
-use nix::libc;
-use nix::sys::socket::{socket, AddressFamily, SockType, SockFlag};
-use nix::sys::socket::{setsockopt, sockopt, SockaddrLike, sockaddr};
-use nix::sys::socket::{bind, recvfrom};
-use nix::sys::socket::{InetAddr, IpAddr as NixIpAddr};
-use nix::sys::time::TimeVal;
-use nix::sys::time::TimeSpec;
-use nix::errno::Errno;
-use nix::unistd::{close, getpid};
-*/
+use icmp_socket::{IcmpSocket, IcmpSocket4, Icmpv4Packet, Icmpv4Message};
 
 fn main() {
     
@@ -71,8 +62,8 @@ fn main() {
         icmp_ping(dist_addr, run_ping, print_count_ping);
     }).unwrap();
 
-    let icmp_route: thread::JoinHandle<()> = thread::Builder::new().name("ICMP_ping_thread".to_string()).spawn(move || {
-        icmp_route(dist_addr, local_addr, config.udp_port, run_route, print_count_route);
+    let icmp_route: thread::JoinHandle<()> = thread::Builder::new().name("ICMP_route_thread".to_string()).spawn(move || {
+        icmp_route(dist_addr/*"8.8.8.8".parse().unwrap()*/, local_addr, run_route, print_count_route);
     }).unwrap();
 
 
@@ -83,7 +74,7 @@ fn main() {
         if line.starts_with("exit") {
             atomic_runner.store(false, Ordering::SeqCst);
         }
-        println!("=====================EXITING=====================");
+        println!("=============================EXITING=============================");
         thread::sleep(Duration::from_secs(3));
     }
 
@@ -235,90 +226,50 @@ fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: A
 
 //********************************************************************************************************************************
 // Fonction ICMP route, used to discover the current route to a distant address.
-fn icmp_route(dest_addr: Ipv4Addr, local_addr: Ipv4Addr, port: u16, run_route: Arc<AtomicBool>, print_count_route: Arc<AtomicU16>) {
+fn icmp_route(dest_addr: Ipv4Addr, local_addr: Ipv4Addr, run_route: Arc<AtomicBool>, print_count_route: Arc<AtomicU16>) {
     let mut local_counter: u16 = 0;
     let mut tmp_counter: u16 = 0;
-    let mut sequence_counter: u8 = 0;
+    let mut sequence_counter: u16 = 0;
     let mut ttl_counter: u32 = 0;
-    let mut send_buffer = [0u8; 64];
-    let mut receive_buffer = [0u8; 64];
     let mut src_ip: IpAddr= "0.0.0.0".parse().unwrap();
-    let mut addr_map: HashMap<u32, IpAddr> = HashMap::new();
-
-    send_buffer[0] = 8; // ICMP echo request
-    send_buffer[1] = 0; // ICMP code
-    send_buffer[2] = 0; // Checksum
-    send_buffer[3] = 0;
-    send_buffer[4] = 1; // Identifier
-    send_buffer[5] = 1;
-    send_buffer[6] = 0; // Sequence number
-    send_buffer[7] = 1;
+    let mut addr_vec: Vec<(u32, IpAddr)> = Vec::new();
+    let mut final_vec: Vec<(u32, IpAddr)> = Vec::new();
     
-    let local_socket: SocketAddr = SocketAddr::new(IpAddr::V4(local_addr), port);
-    let dest_socket: SocketAddr = SocketAddr::new(IpAddr::V4(dest_addr), port);
-    let socket = UdpSocket::bind(local_socket).unwrap();
     while run_route.load(Ordering::SeqCst){
         while src_ip != IpAddr::V4(dest_addr){
             ttl_counter += 1;
             sequence_counter += 1;
-            socket.set_ttl(ttl_counter).unwrap();
-            send_buffer[6] = sequence_counter; 
-            socket.send_to(&send_buffer, &dest_socket).unwrap();
-            let (_len, src_addr) = socket.recv_from(&mut receive_buffer).unwrap();
-            src_ip = src_addr.ip();
-            addr_map.insert(ttl_counter, src_ip);
+
+            let packetmsg = Icmpv4Message::Echo { identifier: 1, sequence: sequence_counter, payload: vec![] };
+            let packet = Icmpv4Packet { typ: 8, code: 0, checksum: 0, message: packetmsg};
+            let mut icmp_socket = IcmpSocket4::try_from(local_addr).unwrap();
+            icmp_socket.set_max_hops(ttl_counter);
+
+            icmp_socket.send_to(dest_addr, packet).expect("Error while sending echo request");//sending echo request
+
+            let (packet, src) = icmp_socket.rcv_from().unwrap();//listening for answer
+
+            let sender_address = src.as_socket_ipv4().unwrap();//getting the adress from the answer
+
+            println!("debug: type : {}, code: {}, srcaddr : {}", packet.typ, packet.code, sender_address);
+
+            src_ip = IpAddr::V4(*sender_address.ip()); //extracting ip
+            addr_vec.push((ttl_counter, src_ip)); //pushing in stockage vector
+
+            println!("Source IP address: {}", src_ip);
         }
 
         while tmp_counter==local_counter {                     // PERIODIC STAT PRINT WAITING
             thread::sleep(Duration::from_millis(200));
             tmp_counter = print_count_route.load(Ordering::SeqCst);
         }
-        src_ip="0.0.0.0".parse().unwrap();
+        src_ip= "0.0.0.0".parse().unwrap();
         local_counter = tmp_counter.clone();
-        println!("Route to Dist addr : {:?}", addr_map);
-        addr_map.clear();
+        println!("Route to Dist addr : {:?}", addr_vec);
+        final_vec = addr_vec.clone();
+        addr_vec.clear();
         ttl_counter = 0;
     }
+        //LAST PRINT BEFORE CLOSING
+    println!("Route to Dist addr : {:?}", final_vec);
 }
-/*
-    let mut sequence_counter=0;
-    let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(dist_addr), port)).expect("failed to init Socket for route discovery");
-    for ttl in 1..16 {
-        send_icmp_echo_request(IpAddr::V4(dist_addr), ttl);
-        let responding_address = receive_icmp_echo_reply(&socket, sequence_counter);
-    }
-
-
-}
-
-
-//Auxiliary functions
-
-fn send_icmp_echo_request(dest_ip: IpAddr, ttl: u16) {
-    let socket = UdpSocket::bind("0.0.0.0:0").expect("Failed to bind socket");
-    let payload = [0; 32];
-    let mut seq = 0;
-
-    socket.connect(dest_ip).expect("Failed to connect to destination");
-    socket.send(&payload).expect("Failed to send ICMP echo request");
-    seq = socket.take_error().unwrap_or(0);
-    (start_time, seq)
-}
-
-fn receive_icmp_echo_reply(socket: &UdpSocket, id: u16) -> std::time::Duration {
-    let mut buffer = [0; 512];
-
-    socket.set_read_timeout(Some(Duration::from_secs(1))).expect("Failed to set read timeout");
-    match socket.recv_from(&mut buffer) {
-        Ok((_, src_addr)) => {
-            println!("Received ICMP echo reply from {}", src_addr);
-            let end_time = std::time::Instant::now();
-            end_time - start_time
-        }
-        Err(_) => {
-            println!("Timeout while waiting for ICMP echo reply");
-            Duration::from_secs(std::u64::MAX)
-        }
-    }
-}
- */
