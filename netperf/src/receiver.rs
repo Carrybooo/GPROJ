@@ -60,18 +60,18 @@ fn handle_connection(mut stream: TcpStream) {
         let copy = buf.clone();
         let received_data = String::from_utf8_lossy(&copy);
         
-        if received_data.contains("updatecall") {
+        if received_data.trim_matches('\0').contains("finishcall") {
+            println!("finish call received, sending total count: {}", received_packets);
+            stream.write(received_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
+            stream.flush().unwrap();
+            break;
+        }
+        if received_data.trim_matches('\0').contains("updatecall") {
             println!("update call received, sending count: {}", partial_packets);
             stream.write(partial_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
             stream.flush().unwrap();
             partial_packets = 0;
             buf = [0; 65535];
-        }
-        if received_data.starts_with("finishcall") {
-            println!("finish call received, sending total count: {}", received_packets);
-            stream.write(received_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
-            stream.flush().unwrap();
-            break;
         }
     }
 }

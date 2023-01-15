@@ -138,10 +138,10 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
             partial_start = Instant::now();
         }
     }
-
         //LAST PRINT BEFORE CLOSING
     stream.flush().unwrap();
     stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
+    stream.flush().unwrap();
     stream.read(&mut buff).unwrap();
     let receiver_count: u64 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
     let total_time:u64 = start.elapsed().as_secs();
@@ -150,12 +150,12 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     let drop_ratio: f64 = ((drop_count as f64 / total_packets as f64)*100.0).round();
  
     println!(
-        "total time of the benchmark : {}\
-        \ntotal bytes transfered : {}\
+        "total time of the benchmark : {}secs\
+        \ntotal bytes transfered : {}Mo\
         \ntotal average speed : {} Ko/s\
         \nTotal packet drop ratio : {}% ({} dropped count/{} total)", 
         total_time,
-        total_packets*65535,
+        total_packets*65535/1000000,
         total_speed, 
         drop_ratio, 
         drop_count, 
