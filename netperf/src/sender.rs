@@ -71,7 +71,6 @@ fn main() {
     tcp_connection.join().expect("Erreur lors de la fermeture du thread TCP_thread");
     printer.join().expect("Erreur lors de la fermeture du thread printer_thread");
 
-
 }
 
 
@@ -80,39 +79,37 @@ fn main() {
 fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, count_tcp: Arc<AtomicU16>){
     let distant_socket: SocketAddr = SocketAddr::new(IpAddr::V4(dist_addr), port);
     let mut stream: TcpStream = TcpStream::connect(distant_socket).unwrap();
-    let mut array_vec: ArrayVec<u8, 8096> = ArrayVec::new();
+    let mut array_vec: ArrayVec<u8, 65535> = ArrayVec::new();
         for _ in 0..array_vec.capacity() {
-            array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 32768 Bytes so 32kiB)
+            array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 65535 Bytes so 32kiB)
         }
-    let write_buffer: [u8; 8096] = array_vec.into_inner().unwrap();
+    let write_buffer: [u8; 65535] = array_vec.into_inner().unwrap();
     let mut local_counter: u16 = 0;
     let mut total_packets: u64 = 0;
     let start: Instant = Instant::now();
     let mut partial_total_packets: u64 = 0;
     let mut partial_start: Instant = Instant::now();
-    let mut buf: [u8; 8096] = [0; 8096];
+    let mut buf: [u8; 65535] = [0; 65535];
 
     while run_tcp.load(Ordering::SeqCst) { //MAIN LOOP OF THE THREAD
-        total_packets += 1; partial_total_packets += 1;
-        let write_buffer_clone: [u8; 8096] = write_buffer.clone();
+        let write_buffer_clone: [u8; 65535] = write_buffer.clone();
         stream.write(&write_buffer_clone).expect("Error while transmitting data from TCP socket.");
-
+        stream.flush().unwrap();
+        total_packets += 1; partial_total_packets += 1;
         
         let tmp_counter: u16 = count_tcp.load(Ordering::SeqCst);
         if tmp_counter!=local_counter {
             local_counter = tmp_counter.clone();
-            stream.write("update".as_bytes()).expect("Error while transmitting update call");
+            stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
             stream.read(&mut buf).unwrap();
             let partial_time: u128 = partial_start.elapsed().as_millis();
-            let partial_speed: u64 = partial_total_packets*32768 / partial_time as u64;
+            let partial_speed: f64 = (partial_total_packets as f64 * 65535f64 / 1000f64 / (partial_time as f64/1000f64)).round();
             let partial_receiver_count: u64 = String::from_utf8(buf.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
             let partial_drop_ratio: f64 = ((partial_total_packets as f64) - (partial_receiver_count as f64)) / (partial_total_packets as f64);
             println!(
-                "Partial average speed : {} ({}bytes/{}s)\
+                "Partial average speed : {}Ko/s\
                 \nPartial packet drop ratio : {} ({} receiver count/{})", 
                 partial_speed, 
-                partial_total_packets*32768, 
-                (partial_time as f64/1000 as f64), 
                 partial_drop_ratio, 
                 partial_receiver_count, 
                 partial_total_packets
@@ -122,21 +119,17 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, coun
         }
     }
 
-    stream.write("finish".as_bytes()).expect("Error while transmitting finish call");
-    let received = String::from_utf8(buf.to_vec()).unwrap();
-    println!("received bytes: {}", received);           
+    stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
     let receiver_count: u64 = String::from_utf8(buf.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
     //LAST PRINT BEFORE CLOSING
     let total_time:u64 = start.elapsed().as_secs();
-    let total_speed: u64 =total_packets*32768 / total_time;
+    let total_speed: u64 =total_packets*65535/1000/total_time;
     let drop_ratio: f64 = ((total_packets as f64) - (receiver_count as f64)) / (total_packets as f64);
  
     println!(
-        "total average speed : {} ({} bytes/{} secs)\
+        "total average speed : {} Ko/s\
         \nTotal packet drop ratio : {} ({} receiver count/{} total)", 
         total_speed, 
-        total_packets*32768, 
-        total_time, 
         drop_ratio, 
         receiver_count, 
         total_packets
@@ -150,7 +143,7 @@ fn printer(run_print: Arc<AtomicBool>, count_print: Arc<AtomicU16>){
     let mut local_counter = count_print.load(Ordering::SeqCst);
     let mut time: Instant = Instant::now();
     while run_print.load(Ordering::SeqCst) {
-        if time.elapsed().as_millis()>4800{
+        if time.elapsed().as_millis()>2000{
             local_counter += 1;
             println!("print counter : {}", local_counter);
             count_print.store(local_counter, Ordering::SeqCst);
