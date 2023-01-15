@@ -23,6 +23,5 @@ serde_derive = "1.0.152"
 arrayvec = "0.7.2"
 rand = "0.8.5"
 fastping-rs = "0.2.3"
-#log = "0.4.17"
-#pretty_env_logger = "0.4.0"
-#pnet = "0.30.0"
+tokio = { version = "1.24.1", features = ["full"] }
+futures = "0.3.24"

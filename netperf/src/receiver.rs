@@ -15,20 +15,10 @@ fn main() {
         4 => config.ip3.parse().unwrap(),
         _ => {println!("Config Error :\nUnrecognized PC number :\"{}\", unable to continue.", config.num_local); exit(1)},
     };
-    let dist_addr: Ipv4Addr = match config.num_dist{
-        1 => config.ip1.parse().unwrap(),
-        2 => config.ip2.parse().unwrap(),
-        3 => config.ip3.parse().unwrap(),
-        4 => config.ip3.parse().unwrap(),
-        _ => {println!("Config Error :\nUnrecognized PC number :\"{}\", unable to continue.", config.num_dist); exit(1)},
-    };
+    
+    let local_tcp_socket: SocketAddr = SocketAddr::new(IpAddr::V4(local_addr), config.tcp_port);
 
-    println!("Local address: {}\nDistant address: {}\nPort: {}", local_addr, dist_addr, config.port);
-
-    let local_socket: SocketAddr = SocketAddr::new(IpAddr::V4(local_addr), config.port);
-
-
-    let listener: TcpListener = TcpListener::bind(local_socket).unwrap();
+    let listener: TcpListener = TcpListener::bind(local_tcp_socket).unwrap();
 
     for incoming in listener.incoming() {
         match incoming {
