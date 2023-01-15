@@ -38,17 +38,16 @@ fn main() {
     };
 
     let atomic_runner:Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
+    let run_sync:Arc<AtomicBool> = atomic_runner.clone();
     let run_tcp:Arc<AtomicBool> = atomic_runner.clone();
     let run_ping:Arc<AtomicBool> = atomic_runner.clone();
     let run_route:Arc<AtomicBool> = atomic_runner.clone();
-    let run_sync:Arc<AtomicBool> = atomic_runner.clone();
     let atomic_print_counter:Arc<AtomicU16> = Arc::new(AtomicU16::new(0));
     let print_count_sync:Arc<AtomicU16> = atomic_print_counter.clone();
     let print_count_tcp:Arc<AtomicU16> = atomic_print_counter.clone();
     let print_count_ping:Arc<AtomicU16> = atomic_print_counter.clone();
     let print_count_route:Arc<AtomicU16> = atomic_print_counter.clone();
     
-
 
     let sync: thread::JoinHandle<()> = thread::Builder::new().name("sync_thread".to_string()).spawn(move || {
         sync(run_sync, print_count_sync);
@@ -67,16 +66,11 @@ fn main() {
     }).unwrap();
 
 
-    while atomic_runner.load(Ordering::SeqCst){
-        let mut line = String::new();
-        println!("WRITE \"exit\" to leave properly and get results");
-        std::io::stdin().read_line(&mut line).unwrap();
-        if line.starts_with("exit") {
-            atomic_runner.store(false, Ordering::SeqCst);
-        }
-        println!("=============================EXITING=============================");
-        thread::sleep(Duration::from_secs(3));
-    }
+    ctrlc::set_handler(move || {
+        atomic_runner.store(false, Ordering::SeqCst);
+        println!("\n\n\n=============================EXITING=============================");
+        thread::sleep(Duration::from_secs(1));
+    }).expect("Error setting Ctrl-C handler");
 
     sync.join().expect("Erreur lors de la fermeture du thread sync_thread");
     tcp_connection.join().expect("Erreur lors de la fermeture du thread TCP_thread");
@@ -87,16 +81,17 @@ fn main() {
 
 //********************************************************************************************************************************
 // Function used to sychronise all syncs to have them print periodicly stats in the same time
-fn sync(run_print: Arc<AtomicBool>, sync_count: Arc<AtomicU16>){
-    let mut local_counter = sync_count.load(Ordering::SeqCst);
+fn sync(run_print: Arc<AtomicBool>, print_count_sync: Arc<AtomicU16>){
     let mut time: Instant = Instant::now();
     while run_print.load(Ordering::SeqCst) {
-        if time.elapsed().as_millis()>3000{
-            local_counter += 1;
-            println!("\n\n\nprint counter : {}", local_counter);
-            sync_count.store(local_counter, Ordering::SeqCst);
+        if time.elapsed().as_millis()>3000 && print_count_sync.load(Ordering::SeqCst)==0 {
+            println!("\n\n\n\n");
+            print_count_sync.store(1, Ordering::SeqCst);
             time = Instant::now();
         }
+    }
+    if print_count_sync.load(Ordering::SeqCst) == 0 {
+        print_count_sync.store(11, Ordering::SeqCst);
     }
 }
 
@@ -104,8 +99,6 @@ fn sync(run_print: Arc<AtomicBool>, sync_count: Arc<AtomicU16>){
 //********************************************************************************************************************************
 // Fonction tcp connection --- used to measure average throughput and packet drop ratio. 
 fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, print_count_tcp: Arc<AtomicU16>){
-    let mut local_counter: u16 = 0;
-
     let distant_socket: SocketAddr = SocketAddr::new(IpAddr::V4(dist_addr), port);
     let mut stream: TcpStream = TcpStream::connect(distant_socket).unwrap();
     let mut array_vec: ArrayVec<u8, 65535> = ArrayVec::new();
@@ -125,9 +118,7 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
         stream.flush().unwrap();
         total_packets += 1; partial_total_packets += 1;
         
-        let tmp_counter: u16 = print_count_tcp.load(Ordering::SeqCst);
-        if tmp_counter!=local_counter {           // PERIODIC STATS PRINT
-            local_counter = tmp_counter.clone();
+        if print_count_tcp.load(Ordering::SeqCst)==1 {           // PERIODIC STATS PRINT
             stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
             stream.read(&mut buff).unwrap();
             let partial_time: u128 = partial_start.elapsed().as_millis();
@@ -145,9 +136,14 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
             );
             partial_total_packets = 0;
             partial_start = Instant::now();
+            print_count_tcp.store(2, Ordering::SeqCst);
         }
+        
     }
-        //LAST PRINT BEFORE CLOSING
+
+    while print_count_tcp.load(Ordering::SeqCst)!=11 {         //LAST PRINT BEFORE CLOSING
+        thread::sleep(Duration::from_millis(100));
+    }
     stream.flush().unwrap();
     stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
     stream.flush().unwrap();
@@ -159,9 +155,9 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     let drop_ratio: f64 = ((drop_count as f64 / total_packets as f64)*100.0).round();
  
     println!( //LAST PRINT
-        "total time of the benchmark : {}secs\
-        \ntotal bytes transfered : {}Mo\
-        \ntotal average speed : {} Ko/s\
+        "Total time of the benchmark : {}secs\
+        \nTotal bytes transfered : {}Mo\
+        \nTotal average speed : {} Ko/s\
         \nTotal packet drop ratio : {}% ({} dropped count/{} total)", 
         total_time,
         total_packets*65535/1000000,
@@ -170,21 +166,19 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
         drop_count, 
         total_packets
     );
-
+    print_count_tcp.store(12, Ordering::SeqCst);
 }
 
 
 //********************************************************************************************************************************
 // Fonction ICMP ping, used to measure average ping to a distant address.
 fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: Arc<AtomicU16>){
-    let mut local_counter: u16 = 0;
-
     let mut average_rtt: u64 = 0;
     let mut partial_average_rtt: u64 = 0;
     let mut ping_number: u64 = 0;
     let mut partial_ping_number: u64 = 0;
 
-    let (pinger, results) = match Pinger::new(Some(500), Some(64)){
+    let (pinger, results) = match Pinger::new(Some(400), Some(64)){
         Ok((pinger, results)) => (pinger, results),
         Err(e) => panic!("Error creating pinger: {}", e), 
     };
@@ -209,16 +203,18 @@ fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: A
             Err(_) => panic!("Worker threads disconnected before the solution was found!"),
         }
         
-        let tmp_counter: u16 = print_count_ping.load(Ordering::SeqCst); 
-        if tmp_counter!=local_counter {                     // PERIODIC STAT PRINT
-            local_counter = tmp_counter.clone();
+        if print_count_ping.load(Ordering::SeqCst)==2 {                     // PERIODIC STAT PRINT
             println!("Partial average RTT: {}ms on {} pings", partial_average_rtt, partial_ping_number);
             partial_average_rtt=0;
             partial_ping_number=0;
+            print_count_ping.store(3, Ordering::SeqCst);
         }    
     }
-        //LAST PRINT BEFORE CLOSING
-    println!("FINAL average RTT: {}ms on {} pings", average_rtt, ping_number);
+    while print_count_ping.load(Ordering::SeqCst)!=12 {        //LAST PRINT BEFORE CLOSING
+        thread::sleep(Duration::from_millis(100));
+    }
+    println!("Total average RTT: {}ms on {} pings", average_rtt, ping_number);
+    print_count_ping.store(13, Ordering::SeqCst);
 }
 
 
@@ -227,13 +223,12 @@ fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: A
 //********************************************************************************************************************************
 // Fonction ICMP route, used to discover the current route to a distant address.
 fn icmp_route(dest_addr: Ipv4Addr, local_addr: Ipv4Addr, run_route: Arc<AtomicBool>, print_count_route: Arc<AtomicU16>) {
-    let mut local_counter: u16 = 0;
-    let mut tmp_counter: u16 = 0;
     let mut sequence_counter: u16 = 0;
     let mut ttl_counter: u32 = 0;
     let mut src_ip: IpAddr= "0.0.0.0".parse().unwrap();
     let mut addr_vec: Vec<(u32, IpAddr)> = Vec::new();
     let mut final_vec: Vec<(u32, IpAddr)> = Vec::new();
+    let mut breaker = false;
     
     while run_route.load(Ordering::SeqCst){
         while src_ip != IpAddr::V4(dest_addr){
@@ -247,29 +242,29 @@ fn icmp_route(dest_addr: Ipv4Addr, local_addr: Ipv4Addr, run_route: Arc<AtomicBo
 
             icmp_socket.send_to(dest_addr, packet).expect("Error while sending echo request");//sending echo request
 
-            let (packet, src) = icmp_socket.rcv_from().unwrap();//listening for answer
+            let (_packet, src) = icmp_socket.rcv_from().unwrap();//listening for answer
 
             let sender_address = src.as_socket_ipv4().unwrap();//getting the adress from the answer
 
-            println!("debug: type : {}, code: {}, srcaddr : {}", packet.typ, packet.code, sender_address);
-
             src_ip = IpAddr::V4(*sender_address.ip()); //extracting ip
             addr_vec.push((ttl_counter, src_ip)); //pushing in stockage vector
-
-            println!("Source IP address: {}", src_ip);
         }
 
-        while tmp_counter==local_counter {                     // PERIODIC STAT PRINT WAITING
+        while print_count_route.load(Ordering::SeqCst)!=3 {  // PERIODIC STAT PRINT WAITING
             thread::sleep(Duration::from_millis(200));
-            tmp_counter = print_count_route.load(Ordering::SeqCst);
+            if !run_route.load(Ordering::SeqCst) {breaker=true; break};
         }
+        if breaker {break};
         src_ip= "0.0.0.0".parse().unwrap();
-        local_counter = tmp_counter.clone();
         println!("Route to Dist addr : {:?}", addr_vec);
         final_vec = addr_vec.clone();
         addr_vec.clear();
         ttl_counter = 0;
+        print_count_route.store(0, Ordering::SeqCst);
     }
-        //LAST PRINT BEFORE CLOSING
+    while print_count_route.load(Ordering::SeqCst)!=13 {
+        thread::sleep(Duration::from_millis(100));
+    }
     println!("Route to Dist addr : {:?}", final_vec);
+    print_count_route.store(1000, Ordering::SeqCst);
 }
