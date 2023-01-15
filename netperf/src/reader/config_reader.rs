@@ -12,6 +12,8 @@ pub struct Data {
 
 #[derive(Deserialize)]
 pub struct Config {
+    pub num_local: u16,
+    pub num_dist: u16,
     pub ip1: String,
     pub ip2: String,
     pub ip3: String,
@@ -19,8 +21,8 @@ pub struct Config {
     pub port: u16,
 }
 
-pub fn read_config() -> Config {
-    let filename = "test.toml";
+pub fn read_config(filename: &str) -> Config {
+    let filename = filename;
 
     let contents = match fs::read_to_string(filename) {
         Ok(file) => file,
@@ -39,13 +41,18 @@ pub fn read_config() -> Config {
         }
     };
 
-    println!("{}", data.config.ip1); 
-    println!("{}", data.config.ip2); 
-    println!("{}", data.config.ip3); 
-    println!("{}", data.config.ip4); 
-    println!("{}", data.config.port); 
+    
+    println!("num_local: {}", data.config.num_local);
+    println!("num_dist: {}", data.config.num_dist);
+    println!("ip1: {}", data.config.ip1); 
+    println!("ip2: {}", data.config.ip2); 
+    println!("ip3: {}", data.config.ip3); 
+    println!("ip4: {}", data.config.ip4); 
+    println!("port: {}", data.config.port); 
 
     return Config{
+        num_local: data.config.num_local,
+        num_dist: data.config.num_dist,
         ip1: data.config.ip1,
         ip2: data.config.ip2,
         ip3: data.config.ip3,
