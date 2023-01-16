@@ -178,7 +178,7 @@ fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: A
     let mut ping_number: u64 = 0;
     let mut partial_ping_number: u64 = 0;
 
-    let (pinger, results) = match Pinger::new(Some(400), Some(64)){
+    let (pinger, results) = match Pinger::new(Some(200), Some(64)){
         Ok((pinger, results)) => (pinger, results),
         Err(e) => panic!("Error creating pinger: {}", e), 
     };
