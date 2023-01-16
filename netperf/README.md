@@ -14,9 +14,9 @@ Cet outil comporte 3 parties :
 
 - Un reader qui a pour but d'aller lire un fichier de config (nommé config.toml) et de le parser pour récupérer les addresses et ports nécessaires au benchmark.
 
-- Un receiver ayant pour tầche d'ouvrir un socket TCP et de compter les paquets reçus et de pouvoir renvoyer périodiquement
+- Un receiver ayant pour tầche d'ouvrir un socket TCP et de compter les paquets reçus et de pouvoir renvoyer périodiquement ce nombre.
 
-- Un sender, qui s'occupe d'envoyer les paquets et de faire les mesures. l'exécution de ce dernier est divisée en 4 threads principaux :
+- Un sender, qui s'occupe d'envoyer les paquets et de faire les mesures. l'exécution de ce dernier est divisée en 4 threads:
   
   - Un thread **tcp_connection** qui va ouvrir une connection TCP jusqu'au receiver et la saturer pour déterminer le débit max. Il garde le compte du nombre de paquets envoyés.
     Il envoie également périodiquement des messages "update" pour que le receiver lui renvoie son compte actuel de paquets pour pouvoir calculer le drop ratio à un instant T.
