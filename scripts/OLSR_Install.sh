@@ -42,7 +42,7 @@ sudo systemctl daemon-reload &&\
 # Install rustup pour compilation script RUST
 sudo curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 sudo systemctl daemon-reload &&\
-echo Installation réussie
+echo Installations OLSR et RUSTUP réussies
 
 # Recherche du numéro de carte Wifi
 # ip a
@@ -59,15 +59,8 @@ echo Installation réussie
 # Vérification de la configuration sur le même réseau AD HOC
 # sudo iwconfig <numéro_de_carte>
 
-# Changement du mode MANAGED > Ad-Hoc
-# sudo systemctl mask wpa_supplicant
-# sudo systemctl stop wpa_supplicant
-# sudo ip link set <numéro_de_carte> down
-# sudo iwconfig <numéro_de_carte> mode ad-hoc
-
-# Changement du ESSID pour un nom commun aux noeuds
-# sudo iwconfig <numéro_de_carte> essid olsr
-# sudo ip link set <numéro_de_carte> up
+# Lancer le script SetAdHoc.sh
+# sudo sh ./SetAdHoc.sh
 
 # Pour lancer olsrd2
 # sudo systemctl start olsrd2.service
