@@ -1,5 +1,5 @@
 # ./SetAdHoc.sh
-interface=`ip a | grep wlx00 | cut -c4-18`
+interface=`ip a | grep ": wlx00" | cut -c4-18`
 echo "$interface"
 sudo systemctl mask wpa_supplicant &&\
 sudo systemctl stop wpa_supplicant &&\
