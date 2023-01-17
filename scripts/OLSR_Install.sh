@@ -15,7 +15,7 @@
 # ./OLSR_Install.sh
 
 sudo apt update -y && sudo apt upgrade -y &&\
-sudo apt install -y git cmake build-essential libnl-3* gcc libtomcrypt-dev &&\
+sudo apt install -y git cmake build-essential libnl-3* gcc libtomcrypt-dev curl &&\
 cd /home/debian/ &&\
 if [ -d "/home/debian/OLSR" ]; then
 	sudo rm -rfv /home/debian/OLSR
@@ -39,7 +39,9 @@ sudo ln -sfv /home/debian/OLSR/build/olsrd2_dynamic /usr/sbin/ &&\
 sudo ln -sfv /home/debian/OLSR/build/olsrd2_dlep_static /usr/sbin/ &&\
 sudo ln -sfv /home/debian/OLSR/build/olsrd2_dlep_dynamic /usr/sbin/ &&\
 sudo systemctl daemon-reload &&\
-
+# Install rustup pour compilation script RUST
+sudo curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+sudo systemctl daemon-reload &&\
 echo Installation réussie
 
 # Recherche du numéro de carte Wifi
