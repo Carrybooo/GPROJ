@@ -1,3 +1,4 @@
+#!/bin/bash
 # PC 1 - carte CC4 - 
 # PC 4 - carte 28B -
 # PC 7 - carte 272 -
