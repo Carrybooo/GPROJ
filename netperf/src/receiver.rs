@@ -40,7 +40,6 @@ fn handle_connection(mut stream: TcpStream) {
     let mut buf: [u8; 65535] = [0; 65535];
     loop{
         let bytes_read: usize = stream.read(&mut buf).unwrap_or_default();
-        //println!("bytes_read: {}", bytes_read);
         received_packets += 1;
         partial_packets += 1;
         if bytes_read == 0 {

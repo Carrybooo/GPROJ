@@ -30,3 +30,20 @@ Cet outil comporte 3 parties :
 
 
 Cet outil est programmé dans le langage Rust car pour mesurer certaines caractéristiques il faut pouvoir utiliser des "raw sockets", il nous fallait donc un language bas niveau. Le Rust a des performances similaires au C mais est plus sûr dans sa gestion de la mémoire et fournit quelques abstractions assez utiles. Il était donc tout indiqué pour cette tầche. 
+
+
+### Utilisation :
+
+- Installer git, puis cargo et rustc (le plus simple c'est en utilisant [Rustup](https://rustup.rs/)
+- Cloner le repo et se positionner dans le dossier netperf
+- Génerer les binaires netperf avec cargo en utilisant ```cargo build```
+- Remplir le fichier config.toml avec les IP des machines (prévu pour 4 ici car on n'en utilise que 4 mais c'est modifiable assez facilement)
+- Choisir pour chaque machine les champs "num_local" et "num_dist" pour le numéro d'addresse locale et celui de l'addresse distante avec laquelle elle va communiquer. (Ce ne sont ni plus ni moins que des selecteurs).
+- Lancer le receiver sur la machine qui va recevoir le traffic
+  - Peut se faire avec ```cargo run --bin receiver``` ou en lançant l'executable à la main via ```./target/debug/receiver``` (en supposant que vous l'ayez laissé là après la compilation)
+- Lancer le sender sur la machine qui va transmettre les données
+  - ***Attention !*** Le sender nécessite les droits administrateurs pour créer certains sockets ICMP, il faut donc le lancer avec ```sudo ./target/debug/sender```
+- (Pour lancer les deux parties du programme, il est nécessaire que le dossier courant contienne bien le fichier config.toml).
+- Une fois les 2 parties lancées, des logs doivent apparaître régulièrement sur le sender et le receiver.
+- Pour arrêter le script, il faut arrêter le sender en 1er, simplement via un **CTRL+C** sur le sender qui déclenche le print de fin. Vous pouvez ensuite arrêter le receiver aussi.
+
