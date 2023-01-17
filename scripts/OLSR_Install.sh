@@ -1,7 +1,7 @@
-# PC 1 - carte CC4
-# PC 4 - carte 28B
-# PC 7 - carte 272 
-# PC 16 - carte CB9
+# PC 1 - carte CC4 - 
+# PC 4 - carte 28B -
+# PC 7 - carte 272 -
+# PC 16 - carte CB9 -
 
 # Terminal à la racine
 # sudo su
