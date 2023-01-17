@@ -4,6 +4,11 @@
 4 HP Probook 650 G1 (D9S33AV)     
 4 clés Wifi AWUS036NEH (clé Wifi USB Alfa Network 320 mW et antenne 5 dBi), IEEE 802.11b/g/n USB 2.0Long-Range USB Adaptater   
 
+NB: 
+PC 1 - carte CC4 - 
+PC 4 - carte 28B -
+PC 7 - carte 272 -
+PC 16 - carte CB9 -
 
 ## 1-Install Debian and OLSR on the four machines   
 
