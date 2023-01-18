@@ -47,6 +47,14 @@ Change the following part in the service
 [Service]
 ExecStart=/usr/sbin/olsrd2_dynamic --load=/etc/olsrd2/olsrd2.conf
 ```
+**Modifiy olsrd2_dlep.conf**    
+Find it: ```find -name olsrd2_dlep.conf```   
+Edit it: ```sudo nano olsrd2_dlep.conf```   
+Use the following configuration:  
+```
+A COMPLETER A COMPLETER A COMPLETER 
+SI BESOIN de Modifiy olsrd2_dlep.conf
+```
 
 **Ad-hoc network configuration**    
 ```
