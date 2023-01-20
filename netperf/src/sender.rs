@@ -99,8 +99,13 @@ fn sync(run_print: Arc<AtomicBool>, print_count_sync: Arc<AtomicU16>){
 //********************************************************************************************************************************
 // Fonction tcp connection --- used to measure average throughput and packet drop ratio. 
 fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, print_count_tcp: Arc<AtomicU16>){
+    //init socket and TCPstream
     let distant_socket: SocketAddr = SocketAddr::new(IpAddr::V4(dist_addr), port);
     let mut stream: TcpStream = TcpStream::connect(distant_socket).unwrap();
+    stream.set_read_timeout(Some(Duration::from_millis(200))).unwrap();
+    stream.set_write_timeout(Some(Duration::from_millis(200))).unwrap();
+
+    //Init buffers and other variables
     let mut array_vec: ArrayVec<u8, 65535> = ArrayVec::new();
         for _ in 0..array_vec.capacity() {
             array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 65535 Bytes so 64kiB)
@@ -110,17 +115,24 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     let start: Instant = Instant::now();
     let mut partial_total_packets: u64 = 0;
     let mut partial_start: Instant = Instant::now();
-    let mut buff: [u8; 65535] = [0; 65535];
+    let mut buff: [u8; 65535];
 
     while run_tcp.load(Ordering::SeqCst) { //MAIN LOOP OF THE THREAD running when the atomic runner bool is true
         let write_buffer_clone: [u8; 65535] = write_buffer.clone();
         stream.write(&write_buffer_clone).expect("Error while transmitting data from TCP socket.");
-        stream.flush().unwrap();
         total_packets += 1; partial_total_packets += 1;
         
         if print_count_tcp.load(Ordering::SeqCst)==1 {           // PERIODIC STATS PRINT
-            stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
-            stream.read(&mut buff).unwrap();
+
+            buff = [0; 65535]; //reset the buffer before writing what we receive into it
+            let mut comparer = buff.clone();
+            while comparer == [0; 65535] { //check function to ensure we got a good response
+                stream.flush().unwrap();
+                stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
+                stream.flush().unwrap();
+                stream.read(&mut buff).expect("error while receiving update number");
+                comparer = buff.clone();
+            }
             let partial_time: u128 = partial_start.elapsed().as_millis();
             let partial_speed: f64 = (partial_total_packets as f64 * 65535f64 / 1000f64 / (partial_time as f64/1000f64)).round();
             let partial_receiver_count: u64 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
@@ -144,10 +156,16 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     while print_count_tcp.load(Ordering::SeqCst)!=11 {         //waiting for LAST PRINT BEFORE CLOSING, triggered by sync_thread
         thread::sleep(Duration::from_millis(100));
     }
-    stream.flush().unwrap();
-    stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
-    stream.flush().unwrap();
-    stream.read(&mut buff).unwrap();
+
+    buff = [0; 65535]; //reset the buffer before writing what we receive into it
+    let mut comparer = buff.clone();
+    while comparer == [0; 65535] { //check function to ensure we got a good response
+        stream.flush().unwrap();
+        stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
+        stream.flush().unwrap();
+        stream.read(&mut buff).expect("error while receiving finish number");
+        comparer = buff.clone();
+    }
     let receiver_count: u64 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
     let total_time:u64 = start.elapsed().as_secs();
     let total_speed: u64 = total_packets*65535/1000/total_time;

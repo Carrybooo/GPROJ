@@ -12,7 +12,7 @@ fn main() {
         1 => config.ip1.parse().unwrap(),
         2 => config.ip2.parse().unwrap(),
         3 => config.ip3.parse().unwrap(),
-        4 => config.ip3.parse().unwrap(),
+        4 => config.ip4.parse().unwrap(),
         _ => {println!("Config Error :\nUnrecognized PC number :\"{}\", unable to continue.", config.num_local); exit(1)},
     };
     
