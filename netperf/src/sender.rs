@@ -106,34 +106,36 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     stream.set_write_timeout(Some(Duration::from_millis(200))).unwrap();
 
     //Init buffers and other variables
-    let mut array_vec: ArrayVec<u8, 1024> = ArrayVec::new();
+    let mut array_vec: ArrayVec<u8, 1448> = ArrayVec::new();
         for _ in 0..array_vec.capacity() {
-            array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 1024 Bytes so 64kiB)
+            array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 1448 Bytes so 64kiB)
         }
-    let write_buffer: [u8; 1024] = array_vec.into_inner().unwrap();
+    let write_buffer: [u8; 1448] = array_vec.into_inner().unwrap();
     let mut total_packets: i128 = 0;
     let start: Instant = Instant::now();
     let mut partial_total_packets: i128 = 0;
     let mut partial_start: Instant = Instant::now();
-    let mut buff: [u8; 1024];
+    let mut buff: [u8; 1448];
 
     while run_tcp.load(Ordering::SeqCst) { //MAIN LOOP OF THE THREAD running when the atomic runner bool is true
-        let write_buffer_clone: [u8; 1024] = write_buffer.clone();
-        stream.write(&write_buffer_clone).expect("Error while transmitting data from TCP socket.");
-        total_packets += 1; partial_total_packets += 1;
+        let write_buffer_clone: [u8; 1448] = write_buffer.clone();
+        match stream.write(&write_buffer_clone) {
+            Ok(_) => {total_packets += 1; partial_total_packets += 1;},
+            Err(_) => {},
+        }
         
         if print_count_tcp.load(Ordering::SeqCst)==1 {           // PERIODIC STATS PRINT
 
-            buff = [0; 1024]; //reset the buffer before writing what we receive into it
-            stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
+            buff = [0; 1448]; //reset the buffer before writing what we receive into it
+            stream.write("updatecall".as_bytes()).ok();
             stream.flush().unwrap();
             while !stream.read(&mut buff).is_ok() { //check function to ensure we got a good response
                 stream.flush().unwrap();
-                stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
+                stream.write("updatecall".as_bytes()).ok();
                 stream.flush().unwrap();
             }
             let partial_time: u128 = partial_start.elapsed().as_millis();
-            let partial_speed: f64 = (partial_total_packets as f64 * 1024f64 / 1000f64 / (partial_time as f64/1000f64)).round();
+            let partial_speed: f64 = (partial_total_packets as f64 * 1448f64 / 1000f64 / (partial_time as f64/1000f64)).round();
             let partial_receiver_count: i128 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
             let partial_drop_count: i128 = partial_receiver_count-partial_total_packets;
             let partial_drop_ratio: f64 = ((partial_drop_count as f64 / partial_total_packets as f64)*100.0).round();
@@ -149,25 +151,23 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
             partial_start = Instant::now();
             print_count_tcp.store(2, Ordering::SeqCst); //trigger the print of the next thread (icmp_ping)
         }
-        
     }
 
     while print_count_tcp.load(Ordering::SeqCst)!=11 {         //waiting for LAST PRINT BEFORE CLOSING, triggered by sync_thread
         thread::sleep(Duration::from_millis(100));
     }
 
-    buff = [0; 1024]; //reset the buffer before writing what we receive into it
-    let mut comparer = buff.clone();
-    while comparer == [0; 1024] { //check function to ensure we got a good response
+    buff = [0; 1448]; //reset the buffer before writing what we receive into it
+    stream.write("finishcall".as_bytes()).ok();
         stream.flush().unwrap();
-        stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
-        stream.flush().unwrap();
-        stream.read(&mut buff).expect("error while receiving finish number");
-        comparer = buff.clone();
-    }
+        while !stream.read(&mut buff).is_ok() { //check function to ensure we got a good response
+            stream.flush().unwrap();
+            stream.write("finishcall".as_bytes()).ok();
+            stream.flush().unwrap();
+        }
     let receiver_count: i128 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
     let total_time:u64 = start.elapsed().as_secs();
-    let total_speed: i128 = total_packets*1024/1000/total_time as i128;
+    let total_speed: i128 = total_packets*1448/1000/total_time as i128;
     let drop_count: i128 = receiver_count-total_packets;
     let drop_ratio: f64 = ((drop_count as f64 / total_packets as f64)*100.0).round();
  
@@ -177,7 +177,7 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
         \nTotal average speed : {} Ko/s\
         \nTotal packet drop ratio : {}% ({} dropped count/{} total)", 
         total_time,
-        total_packets*1024/1000000,
+        total_packets*1448/1000000,
         total_speed, 
         drop_ratio, 
         drop_count, 

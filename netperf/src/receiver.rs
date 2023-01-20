@@ -37,7 +37,7 @@ fn handle_connection(mut stream: TcpStream) {
     let mut partial_packets: u64 = 0;
     let peer_addr = stream.peer_addr().unwrap().to_string();
     println!("Connection started by this remote address: {}", peer_addr);
-    let mut buf: [u8; 1024] = [0; 1024];
+    let mut buf: [u8; 1448] = [0; 1448];
     loop{
         let bytes_read: usize = stream.read(&mut buf).unwrap_or_default();
         received_packets += 1;
@@ -60,7 +60,7 @@ fn handle_connection(mut stream: TcpStream) {
             stream.write(partial_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
             stream.flush().unwrap();
             partial_packets = 0;
-            buf = [0; 1024];
+            buf = [0; 1448];
         }
     }
 }
