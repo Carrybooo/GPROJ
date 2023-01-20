@@ -130,7 +130,7 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
             let mut comparer = buff.clone();
             while comparer == [0; 1448] { //check loop to ensure we got a good response
                 stream.flush().unwrap();
-                stream.write("finishcall".as_bytes()).ok();
+                stream.write("updatecall".as_bytes()).ok();
                 stream.flush().unwrap();
                 stream.read(&mut buff).ok();
                 comparer = buff.clone();

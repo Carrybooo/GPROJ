@@ -39,28 +39,32 @@ fn handle_connection(mut stream: TcpStream) {
     println!("Connection started by this remote address: {}", peer_addr);
     let mut buf: [u8; 1448] = [0; 1448];
     loop{
-        let bytes_read: usize = stream.read(&mut buf).unwrap_or_default();
-        received_packets += 1;
-        partial_packets += 1;
-        if bytes_read == 0 {
-            println!("Connection closed with this address: {}", peer_addr);
-            break;
+        match stream.read(&mut buf){
+            Err(_) => {}
+            Ok(bytes_read) => {
+                received_packets += 1;
+                partial_packets += 1;
+                if bytes_read == 0 {
+                    println!("Connection closed with this address: {}", peer_addr);
+                    break;
+                }
+                let copy = buf.clone();
+                let received_data = String::from_utf8_lossy(&copy);
+                
+                if received_data.trim_matches('\0').contains("finishcall") {
+                    println!("finish call received, sending total count: {}", received_packets);
+                    stream.write(received_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
+                    stream.flush().unwrap();
+                    break;
+                }
+                if received_data.trim_matches('\0').contains("updatecall") {
+                    println!("update call received, sending count: {}", partial_packets);
+                    stream.write(partial_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
+                    stream.flush().unwrap();
+                    partial_packets = 0;
+                    buf = [0; 1448];
+                }}
         }
-        let copy = buf.clone();
-        let received_data = String::from_utf8_lossy(&copy);
         
-        if received_data.trim_matches('\0').contains("finishcall") {
-            println!("finish call received, sending total count: {}", received_packets);
-            stream.write(received_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
-            stream.flush().unwrap();
-            break;
-        }
-        if received_data.trim_matches('\0').contains("updatecall") {
-            println!("update call received, sending count: {}", partial_packets);
-            stream.write(partial_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
-            stream.flush().unwrap();
-            partial_packets = 0;
-            buf = [0; 1448];
-        }
     }
 }
