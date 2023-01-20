@@ -127,12 +127,13 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
         if print_count_tcp.load(Ordering::SeqCst)==1 {           // PERIODIC STATS PRINT
 
             buff = [0; 1448]; //reset the buffer before writing what we receive into it
-            stream.write("updatecall".as_bytes()).ok();
-            stream.flush().unwrap();
-            while !stream.read(&mut buff).is_ok() { //check function to ensure we got a good response
+            let mut comparer = buff.clone();
+            while comparer == [0; 1448] { //check loop to ensure we got a good response
                 stream.flush().unwrap();
-                stream.write("updatecall".as_bytes()).ok();
+                stream.write("finishcall".as_bytes()).ok();
                 stream.flush().unwrap();
+                stream.read(&mut buff).ok();
+                comparer = buff.clone();
             }
             let partial_time: u128 = partial_start.elapsed().as_millis();
             let partial_speed: f64 = (partial_total_packets as f64 * 1448f64 / 1000f64 / (partial_time as f64/1000f64)).round();
@@ -158,13 +159,14 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     }
 
     buff = [0; 1448]; //reset the buffer before writing what we receive into it
-    stream.write("finishcall".as_bytes()).ok();
+    let mut comparer = buff.clone();
+    while comparer == [0; 1448] { //check loop to ensure we got a good response
         stream.flush().unwrap();
-        while !stream.read(&mut buff).is_ok() { //check function to ensure we got a good response
-            stream.flush().unwrap();
-            stream.write("finishcall".as_bytes()).ok();
-            stream.flush().unwrap();
-        }
+        stream.write("finishcall".as_bytes()).ok();
+        stream.flush().unwrap();
+        stream.read(&mut buff).ok();
+        comparer = buff.clone();
+    }
     let receiver_count: i128 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
     let total_time:u64 = start.elapsed().as_secs();
     let total_speed: i128 = total_packets*1448/1000/total_time as i128;
