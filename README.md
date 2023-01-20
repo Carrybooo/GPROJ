@@ -46,6 +46,13 @@ Change the following part in the service
 ExecStart=/usr/sbin/olsrd2_dynamic --load=/etc/olsrd2/olsrd2.conf
 ```
 
+**Verify ip_forward**
+Vérifier que la valeur contenue dans ip_forward est 1. Si 0, la changer en 1 pour assurer le routage.      
+
+```bash              
+/proc/sys/net/ipv4: cat ip_forward         
+```        
+
 **Ad-hoc network configuration**    
 ```
 #!/bin/bash
