@@ -4,11 +4,11 @@
 4 HP Probook 650 G1 (D9S33AV)     
 4 clés Wifi AWUS036NEH (clé Wifi USB Alfa Network 320 mW et antenne 5 dBi), IEEE 802.11b/g/n USB 2.0Long-Range USB Adaptater   
 
-NB: 
-PC 1 - carte CC4 -    
-PC 4 - carte 28B -  
-PC 7 - carte 272 -  
-PC 16 - carte CB9 -  
+NB: les 4 machines doivent avoir des adresses privées sur des réseaux différents pour permettre de vérifier le fonctionnement ad-hoc     
+PC 1 - carte wlx00c0ca959cc4 - IPv4 10.1.0.1/27   
+PC 4 - carte wlx00c0caa7628b - IPv4 10.4.0.4/27
+PC 7 - carte wlx00c0caa76272 - IPv4 10.7.0.7/27
+PC 16 - carte wlx00c0ca959cb9 - IPv4 10.16.0.16/27
 
 ## 1-Install Debian and OLSR on the four machines   
 
@@ -21,20 +21,18 @@ OLSRd v2, commit ```fb15d54``` on Aug 25, 2022.
 Link: https://github.com/OLSR/OONF/tree/fb15d54d6a7a087cb0c5ec37c49804f6ce432396   
 Use https://github.com/Carrybooo/GPROJ/blob/main/scripts/OLSR_Install.sh   
 ```bash
-~/GPROJ/scripts$ ./OLSR_Install.sh  
-~/GPROJ/scripts$ ./SetAdHoc.sh  
+~/GPROJ/scripts$ ./OLSR_Install.sh   
 ```
-### 1.3-Start OLSR
+### 1.3-Verify parameters
 
-**Obtain $name_wifi_card**  
-```ip a | grep ": wlx00" | cut -c4-18```
 
-**Modify olsrd2.conf**   
+**Modify olsrd2.conf** for each machine   
 Find it: ```find -name *.conf```    
 Edit it: ```sudo nano olsrd2.conf```   
 Use the following configuration:  
 ```
 [interface=$name_wifi_card]
+  bindto $adress_IPv4
 [interface=lo]
 ```
 See at: http://www.olsr.org/mediawiki/index.php/OLSR_network_deployments   
@@ -47,33 +45,40 @@ Change the following part in the service
 [Service]
 ExecStart=/usr/sbin/olsrd2_dynamic --load=/etc/olsrd2/olsrd2.conf
 ```
-**Modifiy olsrd2_dlep.conf**    
-Find it: ```find -name olsrd2_dlep.conf```   
-Edit it: ```sudo nano olsrd2_dlep.conf```   
-Use the following configuration:  
-```
-A COMPLETER A COMPLETER A COMPLETER 
-SI BESOIN de Modifiy olsrd2_dlep.conf
-```
 
 **Ad-hoc network configuration**    
 ```
-sudo systemctl mask wpa_supplicant
-sudo systemctl stop wpa_supplicant
-sudo ip link set $name_wifi_card down
-sudo iwconfig $name_wifi_card mode ad-hoc
-sudo iwconfig $name_wifi_card essid olsr
-sudo ip link set $name_wifi_card up
-sudo systemctl restart olsrd2
+#!/bin/bash
+# ./SetAdHoc.sh
+sudo systemctl daemon-reload
+sudo systemctl stop olsrd2 
+interface=`ip a | grep ": wlx00" | cut -c4-18`
+echo "$interface"
+# SELECT THE GOOD FOLLOWING LINE FOR EACH MACHINE AND COMMENT THE THREE OTHERS - HERE EXAMPLE FOR PC16
+# sudo ifconfig $interface 10.1.0.1 netmask 255.255.255.224
+# sudo ifconfig $interface 10.4.0.4 netmask 255.255.255.224
+# sudo ifconfig $interface 10.7.0.7 netmask 255.255.255.224
+sudo ifconfig $interface 10.16.0.16 netmask 255.255.255.224
+sudo systemctl mask wpa_supplicant &&\
+sudo systemctl stop wpa_supplicant &&\
+sudo ip link set $interface down &&\
+sudo iwconfig $interface mode ad-hoc &&\
+sudo iwconfig $interface essid olsr &&\
+sudo ip link set $interface up
+sudo systemctl restart olsrd2  
+ip=`ip a | grep "inet 10." | cut -c9-22`
+echo "Mode ad-hoc paramétré pour la carte $interface avec l'adresse $ip"
 ```
-**Start olsrd2**    
-``` sudo systemctl start olsrd2.service```
+
+```bash
+~/GPROJ/scripts$ ./SetAdHoc.sh  
+```
 
 **Verify olsrd2 is running**    
-``` sudo systemctl status olsrd2.service```
+``` sudo systemctl status olsrd2```
 
 **Stop olsrd2**    
-``` sudo systemctl stop olsrd2.service```
+``` sudo systemctl stop olsrd2```
 
 
 
