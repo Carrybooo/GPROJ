@@ -3,6 +3,7 @@ use crate::reader::config_reader::{Config,read_config};
 
 use std::io::{Read, Write};
 use std::process::exit;
+use std::time::{Instant, Duration};
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 
@@ -39,6 +40,7 @@ fn handle_connection(mut stream: TcpStream) {
     println!("Connection started by this remote address: {}", peer_addr);
     let mut buf: [u8; 1448] = [0; 1448];
     loop{
+        let partial_time: Instant = Instant::now();
         match stream.read(&mut buf){
             Err(_) => {}
             Ok(bytes_read) => {
@@ -51,13 +53,13 @@ fn handle_connection(mut stream: TcpStream) {
                 let copy = buf.clone();
                 let received_data = String::from_utf8_lossy(&copy);
                 
-                if received_data.trim_matches('\0').contains("finishcall") {
+                if received_data.trim_matches('\0').starts_with("finishcall") && partial_packets != 1 && partial_time.elapsed()>Duration::from_secs(1){
                     println!("finish call received, sending total count: {}", received_packets);
                     stream.write(received_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
                     stream.flush().unwrap();
                     break;
                 }
-                if received_data.trim_matches('\0').contains("updatecall") {
+                if received_data.trim_matches('\0').starts_with("updatecall") && partial_packets != 1 && partial_time.elapsed()>Duration::from_secs(1){
                     println!("update call received, sending count: {}", partial_packets);
                     stream.write(partial_packets.to_string().as_bytes()).expect("Error while sending final count of received packets");
                     stream.flush().unwrap();
