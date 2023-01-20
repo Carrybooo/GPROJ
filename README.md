@@ -5,10 +5,10 @@
 4 clés Wifi AWUS036NEH (clé Wifi USB Alfa Network 320 mW et antenne 5 dBi), IEEE 802.11b/g/n USB 2.0Long-Range USB Adaptater   
 
 NB: les 4 machines doivent avoir des adresses privées sur des réseaux différents pour permettre de vérifier le fonctionnement ad-hoc     
-PC 1 - carte wlx00c0ca959cc4 - IPv4 10.1.0.1/27   
-PC 4 - carte wlx00c0caa7628b - IPv4 10.4.0.4/27
-PC 7 - carte wlx00c0caa76272 - IPv4 10.7.0.7/27
-PC 16 - carte wlx00c0ca959cb9 - IPv4 10.16.0.16/27
+PC 1 - carte wlx00c0ca959cc4 - IPv4 10.1.0.1/27             
+PC 4 - carte wlx00c0caa7628b - IPv4 10.4.0.4/27               
+PC 7 - carte wlx00c0caa76272 - IPv4 10.7.0.7/27                 
+PC 16 - carte wlx00c0ca959cb9 - IPv4 10.16.0.16/27                    
 
 ## 1-Install Debian and OLSR on the four machines   
 
