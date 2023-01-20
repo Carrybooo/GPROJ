@@ -34,7 +34,7 @@ Cet outil est programmé dans le langage Rust car pour mesurer certaines caract�
 
 ### Utilisation :
 
-- Installer git, puis cargo et rustc (le plus simple c'est en utilisant [Rustup](https://rustup.rs/)
+- Installer git, puis cargo et rustc (le plus simple c'est en utilisant [Rustup](https://rustup.rs/))
 - Cloner le repo et se positionner dans le dossier netperf
 - Génerer les binaires netperf avec cargo en utilisant ```cargo build```
 - Remplir le fichier config.toml avec les IP des machines (prévu pour 4 ici car on n'en utilise que 4 mais c'est modifiable assez facilement)
