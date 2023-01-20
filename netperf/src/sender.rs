@@ -106,37 +106,36 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
     stream.set_write_timeout(Some(Duration::from_millis(200))).unwrap();
 
     //Init buffers and other variables
-    let mut array_vec: ArrayVec<u8, 65535> = ArrayVec::new();
+    let mut array_vec: ArrayVec<u8, 1024> = ArrayVec::new();
         for _ in 0..array_vec.capacity() {
-            array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 65535 Bytes so 64kiB)
+            array_vec.push(rand::random()); //INIT THE FUTURE WRITE BUFFER WITH FULL RANDOM VALUES (here packet size will be 1024 Bytes so 64kiB)
         }
-    let write_buffer: [u8; 65535] = array_vec.into_inner().unwrap();
-    let mut total_packets: u64 = 0;
+    let write_buffer: [u8; 1024] = array_vec.into_inner().unwrap();
+    let mut total_packets: i128 = 0;
     let start: Instant = Instant::now();
-    let mut partial_total_packets: u64 = 0;
+    let mut partial_total_packets: i128 = 0;
     let mut partial_start: Instant = Instant::now();
-    let mut buff: [u8; 65535];
+    let mut buff: [u8; 1024];
 
     while run_tcp.load(Ordering::SeqCst) { //MAIN LOOP OF THE THREAD running when the atomic runner bool is true
-        let write_buffer_clone: [u8; 65535] = write_buffer.clone();
+        let write_buffer_clone: [u8; 1024] = write_buffer.clone();
         stream.write(&write_buffer_clone).expect("Error while transmitting data from TCP socket.");
         total_packets += 1; partial_total_packets += 1;
         
         if print_count_tcp.load(Ordering::SeqCst)==1 {           // PERIODIC STATS PRINT
 
-            buff = [0; 65535]; //reset the buffer before writing what we receive into it
-            let mut comparer = buff.clone();
-            while comparer == [0; 65535] { //check function to ensure we got a good response
+            buff = [0; 1024]; //reset the buffer before writing what we receive into it
+            stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
+            stream.flush().unwrap();
+            while !stream.read(&mut buff).is_ok() { //check function to ensure we got a good response
                 stream.flush().unwrap();
                 stream.write("updatecall".as_bytes()).expect("Error while transmitting update call");
                 stream.flush().unwrap();
-                stream.read(&mut buff).expect("error while receiving update number");
-                comparer = buff.clone();
             }
             let partial_time: u128 = partial_start.elapsed().as_millis();
-            let partial_speed: f64 = (partial_total_packets as f64 * 65535f64 / 1000f64 / (partial_time as f64/1000f64)).round();
-            let partial_receiver_count: u64 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
-            let partial_drop_count: u64 = partial_receiver_count-partial_total_packets;
+            let partial_speed: f64 = (partial_total_packets as f64 * 1024f64 / 1000f64 / (partial_time as f64/1000f64)).round();
+            let partial_receiver_count: i128 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
+            let partial_drop_count: i128 = partial_receiver_count-partial_total_packets;
             let partial_drop_ratio: f64 = ((partial_drop_count as f64 / partial_total_packets as f64)*100.0).round();
             println!( //PARTIAL PRINT
                 "Partial average speed : {}Ko/s\
@@ -157,19 +156,19 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
         thread::sleep(Duration::from_millis(100));
     }
 
-    buff = [0; 65535]; //reset the buffer before writing what we receive into it
+    buff = [0; 1024]; //reset the buffer before writing what we receive into it
     let mut comparer = buff.clone();
-    while comparer == [0; 65535] { //check function to ensure we got a good response
+    while comparer == [0; 1024] { //check function to ensure we got a good response
         stream.flush().unwrap();
         stream.write("finishcall".as_bytes()).expect("Error while transmitting finish call");
         stream.flush().unwrap();
         stream.read(&mut buff).expect("error while receiving finish number");
         comparer = buff.clone();
     }
-    let receiver_count: u64 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
+    let receiver_count: i128 = String::from_utf8(buff.to_vec()).unwrap().trim_end_matches('\0').parse().unwrap();
     let total_time:u64 = start.elapsed().as_secs();
-    let total_speed: u64 = total_packets*65535/1000/total_time;
-    let drop_count: u64 = receiver_count-total_packets;
+    let total_speed: i128 = total_packets*1024/1000/total_time as i128;
+    let drop_count: i128 = receiver_count-total_packets;
     let drop_ratio: f64 = ((drop_count as f64 / total_packets as f64)*100.0).round();
  
     println!( //LAST PRINT
@@ -178,7 +177,7 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
         \nTotal average speed : {} Ko/s\
         \nTotal packet drop ratio : {}% ({} dropped count/{} total)", 
         total_time,
-        total_packets*65535/1000000,
+        total_packets*1024/1000000,
         total_speed, 
         drop_ratio, 
         drop_count, 
@@ -191,12 +190,12 @@ fn tcp_connection(dist_addr: Ipv4Addr, port: u16, run_tcp: Arc<AtomicBool>, prin
 //********************************************************************************************************************************
 // Fonction ICMP ping, used to measure average ping to a distant address.
 fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: Arc<AtomicU16>){
-    let mut average_rtt: u64 = 0;
-    let mut partial_average_rtt: u64 = 0;
-    let mut ping_number: u64 = 0;
-    let mut partial_ping_number: u64 = 0;
+    let mut average_rtt: i128 = 0;
+    let mut partial_average_rtt: i128 = 0;
+    let mut ping_number: i128 = 0;
+    let mut partial_ping_number: i128 = 0;
 
-    let (pinger, results) = match Pinger::new(Some(200), Some(64)){ //init a pinger that will ping every 200ms a 64bytes packet
+    let (pinger, results) = match Pinger::new(Some(500), Some(64)){ //init a pinger that will ping every 200ms a 64bytes packet
         Ok((pinger, results)) => (pinger, results),
         Err(e) => panic!("Error creating pinger: {}", e), 
     };
@@ -208,12 +207,12 @@ fn icmp_ping(dist_addr: Ipv4Addr, run_ping: Arc<AtomicBool>, print_count_ping: A
     while run_ping.load(Ordering::SeqCst) { // MAIN LOOP OF THE FCT running when atomic runner is true
         match results.recv() {
             Ok(result) => match result {
-                Idle { addr } => {
-                    println!("Ping out of time on: {}.", addr);
+                Idle { addr: _ } => {
+                    //println!("Ping out of time on: {}.", addr);
                 }
                 Receive { addr:_, rtt } => { //Compute the average (and partial) data at each new ping
-                    average_rtt = ((ping_number*average_rtt)+rtt.as_millis()as u64)/(ping_number+1);
-                    partial_average_rtt = ((partial_ping_number*partial_average_rtt)+rtt.as_millis()as u64)/(partial_ping_number+1);
+                    average_rtt = ((ping_number*average_rtt)+rtt.as_millis()as i128)/(ping_number+1);
+                    partial_average_rtt = ((partial_ping_number*partial_average_rtt)+rtt.as_millis()as i128)/(partial_ping_number+1);
                     ping_number += 1;
                     partial_ping_number += 1;
                 }
