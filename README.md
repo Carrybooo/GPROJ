@@ -75,9 +75,9 @@ Depuis un ordinateur autre que 10.1.0.1, **visualiser en temps réel**, la route
 ```bash
 sudo watch traceroute --udp 10.1.0.1
  ```
-Depuis un ordinateur autre que 10.1.0.1, **obtenir la route** pour arriver jusqu'à 10.0.1.0.1 **et des données de liaison imprimées dans un fichier** XML.     
+Depuis un ordinateur autre que 10.1.0.1, **obtenir la route** pour arriver jusqu'à 10.0.1.0.1 **et des données de liaison imprimées dans un fichier csv (-4 = ipv4 / --udp == en udp / --csv == outpout en format csv /  -rwnb == besoin d'un rapport / -c 10 = envoie de dix paquets / -s 1448 = paquet de taille 1448 octets / -o pour les options / -i 1 = envoie d'un paquet toutes les 1s / adresse ip destinataire = 10.1.0.1 / awk 'etc' permet d'enregistrer des tabulations entre les résultats de la commande MTR pour faciliter l'exploitation des résultats en lignes et colonnes / Enregistrement des données dans fichier nommé Test_PC16to_PC01_20m.csv
 ```bash
-mtr --udp -s 1024 -r -w -c 10 -i 1 10.1.0.1 >Test_PC16-PC01_20mètres
+mtr -4 --udp --csv -rwnb -c 10 -s 1448 -o "SR DL AW NBJXMI" -i 1 10.1.0.1 | awk '{print  $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15}'> /home/debian/Résultats_distance/Test_PC16to_PC01_20m.csv
 ```
 
 
