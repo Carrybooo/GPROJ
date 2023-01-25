@@ -4,7 +4,7 @@
 4 HP Probook 650 G1 (D9S33AV)     
 4 clés Wifi AWUS036NEH (clé Wifi USB Alfa Network 320 mW et antenne 5 dBi), IEEE 802.11b/g/n USB 2.0Long-Range USB Adaptater   
 
-NB: les 4 machines doivent avoir des adresses privées sur des réseaux différents pour permettre de vérifier le fonctionnement ad-hoc     
+NB: les 4 machines doivent avoir des adresses privées sur des réseaux différents pour permettre de vérifier le fonctionnement ad-hoc. Le script SetAdHocMan.sh permet de configurer n'importe quelle machine, possédant n'importe quelle carte Wifi, avec une des 4 adresses IPv4 suivantes.     
 PC 1 - carte wlx00c0ca959cc4 - IPv4 10.1.0.1/27             
 PC 4 - carte wlx00c0caa7628b - IPv4 10.4.0.4/27               
 PC 7 - carte wlx00c0caa76272 - IPv4 10.7.0.7/27                 
@@ -23,8 +23,7 @@ Use https://github.com/Carrybooo/GPROJ/blob/main/scripts/OLSR_Install.sh
 ```bash
 ~/GPROJ/scripts$ ./OLSR_Install.sh   
 ```
-### 1.3-Verify parameters
-
+### 1.3-Configure and verify parameters
 
 **Modify olsrd2.conf** for each machine   
 Find it: ```find -name *.conf```    
@@ -32,7 +31,7 @@ Edit it: ```sudo nano olsrd2.conf```
 Use the following configuration:  
 ```
 [interface=$name_wifi_card]
-  bindto $adress_IPv4
+  bindto $adress_IPv4 # $adress_IPv4 à remplacer par 10.1.0.1/27 ou 10.4.0.4/27 ou 10.7.0.7/27 ou 10.16.0.16/27.
 [interface=lo]
 ```
 See at: http://www.olsr.org/mediawiki/index.php/OLSR_network_deployments   
@@ -54,31 +53,9 @@ Vérifier que la valeur contenue dans ip_forward est 1. Si 0, la changer en 1 po
 ```        
 
 **Ad-hoc network configuration**    
-```
-#!/bin/bash
-# ./SetAdHoc.sh
-sudo systemctl daemon-reload
-sudo systemctl stop olsrd2 
-interface=`ip a | grep ": wlx00" | cut -c4-18`
-echo "$interface"
-# SELECT THE GOOD FOLLOWING LINE FOR EACH MACHINE AND COMMENT THE THREE OTHERS - HERE EXAMPLE FOR PC16
-# sudo ifconfig $interface 10.1.0.1 netmask 255.255.255.224
-# sudo ifconfig $interface 10.4.0.4 netmask 255.255.255.224
-# sudo ifconfig $interface 10.7.0.7 netmask 255.255.255.224
-sudo ifconfig $interface 10.16.0.16 netmask 255.255.255.224
-sudo systemctl mask wpa_supplicant &&\
-sudo systemctl stop wpa_supplicant &&\
-sudo ip link set $interface down &&\
-sudo iwconfig $interface mode ad-hoc &&\
-sudo iwconfig $interface essid olsr &&\
-sudo ip link set $interface up
-sudo systemctl restart olsrd2  
-ip=`ip a | grep "inet 10." | cut -c9-22`
-echo "Mode ad-hoc paramétré pour la carte $interface avec l'adresse $ip"
-```
-
+Configurer en mode ad-hoc, quasi-automatiquement (choix de 4 @IPv4), une machine possédant une carte Wifi branchée.
 ```bash
-~/GPROJ/scripts$ ./SetAdHoc.sh  
+~/GPROJ/scripts$ ./SetAdHocMan.sh  
 ```
 
 **Verify olsrd2 is running**    
@@ -86,6 +63,22 @@ echo "Mode ad-hoc paramétré pour la carte $interface avec l'adresse $ip"
 
 **Stop olsrd2**    
 ``` sudo systemctl stop olsrd2```
+
+### 1.4-Control the OLSRv2 ad-hoc network    
+Il existe plusieurs commandes pour vérifier l'état du réseau ad-hoc créé.      
+
+Depuis un ordinateur autre que 10.1.0.1, **obtenir la route** pour arriver jusqu'à 10.0.1.0.1.     
+```bash
+sudo traceroute --udp 10.1.0.1
+```
+Depuis un ordinateur autre que 10.1.0.1, **visualiser en temps réel**, la route pour arriver jusqu'à 10.0.1.0.1.    
+```bash
+sudo watch traceroute --udp 10.1.0.1
+ ```
+Depuis un ordinateur autre que 10.1.0.1, **obtenir la route** pour arriver jusqu'à 10.0.1.0.1 **et des données de liaison imprimées dans un fichier** XML.     
+```bash
+mtr --udp -s 1024 -r -w -c 10 -i 1 10.1.0.1 >Test_PC16-PC01_20mètres
+```
 
 
 
