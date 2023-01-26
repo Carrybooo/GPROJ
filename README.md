@@ -6,9 +6,9 @@
 
 NB: les 4 machines doivent avoir des adresses privées sur des réseaux différents pour permettre de vérifier le fonctionnement ad-hoc. Le script SetAdHocMan.sh permet de configurer n'importe quelle machine, possédant n'importe quelle carte Wifi, avec une des 4 adresses IPv4 suivantes.     
 PC 1 - carte wlx00c0ca959cc4 - IPv4 10.1.0.1/27             
-PC 4 - carte wlx00c0caa7628b - IPv4 10.4.0.4/27               
-PC 7 - carte wlx00c0caa76272 - IPv4 10.7.0.7/27                 
-PC 16 - carte wlx00c0ca959cb9 - IPv4 10.16.0.16/27                    
+PC 2 - carte wlx00c0caa7628b - IPv4 10.4.0.4/27               
+PC 3 - carte wlx00c0caa76272 - IPv4 10.7.0.7/27                 
+PC 4 - carte wlx00c0ca959cb9 - IPv4 10.16.0.16/27                    
 
 ## 1-Install Debian and OLSR on the four machines   
 
@@ -67,6 +67,10 @@ Configurer en mode ad-hoc, quasi-automatiquement (choix de 4 @IPv4), une machine
 ### 1.4-Control the OLSRv2 ad-hoc network    
 Il existe plusieurs commandes pour vérifier l'état du réseau ad-hoc créé.      
 
+Un simple ping permet de vérifier que la liasion est fonctionnelle
+```bash
+ping 10.1.0.1
+```
 Depuis un ordinateur autre que 10.1.0.1, **obtenir la route** pour arriver jusqu'à 10.0.1.0.1.     
 ```bash
 sudo traceroute --udp 10.1.0.1
@@ -75,10 +79,5 @@ Depuis un ordinateur autre que 10.1.0.1, **visualiser en temps réel**, la route
 ```bash
 sudo watch traceroute --udp 10.1.0.1
  ```
-Depuis un ordinateur autre que 10.1.0.1, **obtenir la route** pour arriver jusqu'à 10.0.1.0.1 **et des données de liaison imprimées dans un fichier csv** (-4 = ipv4 / --udp == en udp / --csv == outpout en format csv /  -rwnb == besoin d'un rapport / -c 5000 = envoie de 5000 paquets / -s 1448 = paquet de taille 1448 octets / -o pour les options / -i 0.01 = envoie d'un paquet toutes les 0.01s = 10ms / adresse ip destinataire = 10.1.0.1 / awk 'etc' permet d'enregistrer des tabulations entre les résultats de la commande MTR pour faciliter l'exploitation des résultats en lignes et colonnes / Enregistrement des données dans fichier nommé Test_PC16to_PC01_20m.csv
-```bash
-mtr -4 --udp --csv -rwnb -c 5000 -s 1448 -o "SR DL AW NBJXMI" -i 0.01 10.1.0.1 | awk '{print  $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15}'> /home/debian/Résultats_distance/Test_PC16to_PC01_20m.csv
-```
-
 
 
