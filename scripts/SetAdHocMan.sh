@@ -26,7 +26,15 @@
 # Licence : free
 
 sudo systemctl daemon-reload
+<<<<<<< Updated upstream
 sudo systemctl stop olsrd2 
+=======
+sudo systemctl stop olsrd2
+ip1=10.1.0.1
+ip2=10.4.0.4
+ip3=10.7.0.7
+ip4=10.16.0.16 
+>>>>>>> Stashed changes
 interface=`ip a | grep ": wlx00" | cut -c4-18`
 echo "Le numéro de la carte Wifi installée est $interface"
 # Utilisateur doit sélectionner une @IP parmis 4 choix
@@ -34,6 +42,7 @@ while true
 do
     echo "Choisissez une machine :"
     # Correspond au PC-PF-ADHOC-1
+<<<<<<< Updated upstream
     echo "1 pour une machine avec @IP=10.1.0.1"
     # Correspond au PC-PF-ADHOC-4
     echo "4 pour une machine avec @IP=10.4.0.4"
@@ -41,11 +50,21 @@ do
     echo "7 pour une machine avec @IP=10.7.0.7"
     # Correspond au PC-PF-ADHOC-16
     echo "16 pour une machine avec @IP=10.16.0.16"
+=======
+    echo "1 pour une machine comme étant $ip1"
+    # Correspond au PC-PF-ADHOC-4
+    echo "2 pour une machine comme étant $ip2"
+    # Correspond au PC-PF-ADHOC-7
+    echo "3 pour une machine comme étant $ip3"
+    # Correspond au PC-PF-ADHOC-16
+    echo "4 pour une machine comme étant $ip4"
+>>>>>>> Stashed changes
     echo "Q pour Quitter"
 
     read -p "Sélection : " selection
 
     case $selection in
+<<<<<<< Updated upstream
         1)  ip="10.1.0.1"
             break
             ;;
@@ -56,6 +75,18 @@ do
             break
             ;;
         16) ip="10.16.0.16"
+=======
+        1)  ip=$ip1
+            break
+            ;;
+        2)  ip=$ip2
+            break
+            ;;
+        3)  ip=$ip3
+            break
+            ;;
+        4) ip=$ip4
+>>>>>>> Stashed changes
             break
             ;;
         Q)  echo "Au revoir!"
@@ -83,11 +114,16 @@ while true; do
             ;;
     esac
 done
+<<<<<<< Updated upstream
 # SELECT THE GOOD FOLLOWING LINE FOR EACH MACHINE AND COMMENT THE THREE OTHERS - HERE EXAMPLE FOR PC16
 # sudo ifconfig $interface 10.1.0.1 netmask 255.255.255.224
 # sudo ifconfig $interface 10.4.0.4 netmask 255.255.255.224
 # sudo ifconfig $interface 10.7.0.7 netmask 255.255.255.224
 sudo ifconfig $interface $ip netmask 255.255.255.224
+=======
+
+sudo ifconfig $interface $ip netmask 255.255.255.224 #masque /27
+>>>>>>> Stashed changes
 sudo systemctl mask wpa_supplicant &&\
 sudo systemctl stop wpa_supplicant &&\
 sudo ip link set $interface down &&\
@@ -95,4 +131,8 @@ sudo iwconfig $interface mode ad-hoc &&\
 sudo iwconfig $interface essid olsr &&\
 sudo ip link set $interface up
 sudo systemctl restart olsrd2  
+<<<<<<< Updated upstream
 echo "Mode ad-hoc paramétré pour la carte $interface avec l'adresse $ip. Cette adresse est seule dans son réseau."
+=======
+echo "Mode ad-hoc paramétré pour la carte Wifi $interface avec l'adresse $ip / 27. Cette adresse est seule dans son réseau."
+>>>>>>> Stashed changes
