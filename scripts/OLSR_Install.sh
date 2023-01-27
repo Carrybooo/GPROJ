@@ -43,30 +43,3 @@ sudo systemctl daemon-reload &&\
 sudo curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 sudo systemctl daemon-reload &&\
 echo Installations OLSR et RUSTUP réussies
-
-# Recherche du numéro de carte Wifi
-# ip a
-
-# Modif fichier de conf si besoin
-# cd OLSR/run
-# sudo nano olsrd2.conf
-# sudo systemctl restart olsrd2.service
-
-# [interface <numéro_de_carte>]
-# [interface=lo]
-# Enregistrer / fermer
-
-# Vérification de la configuration sur le même réseau AD HOC
-# sudo iwconfig <numéro_de_carte>
-
-# Lancer le script SetAdHoc.sh
-# sudo sh ./SetAdHoc.sh
-
-# Pour lancer olsrd2
-# sudo systemctl start olsrd2.service
-
-# Pour vérifier olsrd2 actif
-# sudo systemctl status olsrd2.service
-
-# Pour stopper olsrd2
-# sudo systemctl stop olsrd2.service
