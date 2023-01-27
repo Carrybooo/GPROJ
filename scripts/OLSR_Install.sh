@@ -1,18 +1,4 @@
 #!/bin/bash
-# PC 1 - carte CC4 - 
-# PC 4 - carte 28B -
-# PC 7 - carte 272 -
-# PC 16 - carte CB9 -
-
-# Terminal à la racine
-# sudo su
-# cd /etc/apt
-# nano sources.list
-# mettre un #ligne 3
-
-# En user et pas en root !
-# chmod +x OLSR_Install.sh
-# ./OLSR_Install.sh
 
 sudo apt update -y && sudo apt upgrade -y &&\
 sudo apt install -y git cmake build-essential libnl-3* gcc libtomcrypt-dev curl &&\
